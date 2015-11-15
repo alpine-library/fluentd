@@ -1,12 +1,7 @@
 #!/bin/sh
 
-ELASTICSEARCH_SERVICE_NAME=$(echo "${ELASTICSEARCH_SERVICE_NAME:-ELASTICSEARCH}" | awk '{print toupper($0)}')
-SVC_HOST=${ELASTICSEARCH_SERVICE_NAME}_SERVICE_HOST
-SVC_HOST=${SVC_HOST:-elasticsearch-logging.kube-system.svc.kube.local}
-SVC_PORT=${ELASTICSEARCH_SERVICE_NAME}_SERVICE_PORT
-SVC_PORT=${SVC_PORT:-9200}
-ELASTICSEARCH_SCHEME=${ELASTICSEARCH_SCHEME:-http}
-
+ELASTICSEARCH_HOST=${ELASTICSEARCH_HOST:-elasticsearch-logging.kube-system.svc.kube.local}
+ELASTICSEARCH_PORT=${ELASTICSEARCH_PORT:-9200}
 FLUENTD_FLUSH_INTERVAL=${FLUENTD_FLUSH_INTERVAL:-60s}
 FLUENTD_FLUSH_THREADS=${FLUENTD_FLUSH_THREADS:-1}
 FLUENTD_RETRY_LIMIT=${FLUENTD_RETRY_LIMIT:-10}
@@ -113,8 +108,8 @@ cat << 'EOF' > /etc/fluent/fluent.conf
 EOF
 
 cat << EOF >> /etc/fluent/fluent.conf
-  host $(eval echo \$${SVC_HOST})
-  port $(eval echo \$${SVC_PORT})
+  host $(eval echo \$${ELASTICSEARCH_HOST})
+  port $(eval echo \$${ELASTICSEARCH_PORT})
   scheme ${ELASTICSEARCH_SCHEME}
   $([ -n "${ELASTICSEARCH_USER}" ] && echo user ${ELASTICSEARCH_USER})
   $([ -n "${ELASTICSEARCH_PASSWORD}" ] && echo password ${ELASTICSEARCH_PASSWORD})
