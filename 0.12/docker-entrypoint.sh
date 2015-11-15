@@ -2,7 +2,9 @@
 
 ELASTICSEARCH_SERVICE_NAME=$(echo "${ELASTICSEARCH_SERVICE_NAME:-ELASTICSEARCH}" | awk '{print toupper($0)}')
 SVC_HOST=${ELASTICSEARCH_SERVICE_NAME}_SERVICE_HOST
+SVC_HOST=${SVC_HOST:-elasticsearch-logging.kube-system.svc.kube.local}
 SVC_PORT=${ELASTICSEARCH_SERVICE_NAME}_SERVICE_PORT
+SVC_PORT=${SVC_PORT:-9200}
 ELASTICSEARCH_SCHEME=${ELASTICSEARCH_SCHEME:-http}
 
 FLUENTD_FLUSH_INTERVAL=${FLUENTD_FLUSH_INTERVAL:-60s}
@@ -19,24 +21,95 @@ mkdir /etc/fluent
 cat << 'EOF' > /etc/fluent/fluent.conf
 <source>
   type tail
-  path /var/lib/docker/containers/*/*-json.log
-  pos_file /etc/fluent/fluentd-docker.pos
+  path /var/lib/docker/containers/*/*.log
+  pos_file /var/log/es-containers.log.pos
   time_format %Y-%m-%dT%H:%M:%S
   tag docker.*
   format json
+  read_from_head true
 </source>
 
 <match docker.var.lib.docker.containers.*.*.log>
-  type kubernetes
+  type docker_format
   container_id ${tag_parts[5]}
   tag docker.${name}
 </match>
 
-<match kubernetes>
-  type elasticsearch
-  logstash_format true
-  reload_connections false
-  time_key time
+<source>
+  type tail
+  format none
+  path /var/log/salt/minion
+  pos_file /var/log/gcp-salt.pos
+  tag salt
+</source>
+
+<source>
+  type tail
+  format none
+  path /var/log/startupscript.log
+  pos_file /var/log/es-startupscript.log.pos
+  tag startupscript
+</source>
+
+<source>
+  type tail
+  format none
+  path /var/log/docker.log
+  pos_file /var/log/es-docker.log.pos
+  tag docker
+</source>
+
+<source>
+  type tail
+  format none
+  path /var/log/etcd.log
+  pos_file /var/log/es-etcd.log.pos
+  tag etcd
+</source>
+
+<source>
+  type tail
+  format none
+  path /var/log/kubelet.log
+  pos_file /var/log/es-kubelet.log.pos
+  tag kubelet
+</source>
+
+<source>
+  type tail
+  format none
+  path /var/log/kube-apiserver.log
+  pos_file /var/log/es-kube-apiserver.log.pos
+  tag kube-apiserver
+</source>
+
+<source>
+  type tail
+  format none
+  path /var/log/kube-controller-manager.log
+  pos_file /var/log/es-kube-controller-manager.log.pos
+  tag kube-controller-manager
+</source>
+
+<source>
+  type tail
+  format none
+  path /var/log/kube-scheduler.log
+  pos_file /var/log/es-kube-scheduler.log.pos
+  tag kube-scheduler
+</source>
+
+<filter kubernetes.**>
+  type kubernetes_metadata
+</filter>
+
+<match **>
+   type elasticsearch
+   log_level info
+   include_tag_key true
+   host elasticsearch-logging
+   port 9200
+   logstash_format true
 EOF
 
 cat << EOF >> /etc/fluent/fluent.conf

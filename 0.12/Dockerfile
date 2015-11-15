@@ -10,11 +10,12 @@ RUN gem update --system \
   && gem install fluentd -v ${FLUENTD_VERSION} \
   && gem install fluent-plugin-kubernetes_metadata_filter \
                 fluent-plugin-forest \
-                fluent-plugin-elasticsearch
+                fluent-plugin-elasticsearch \
+                fluent-plugin-docker-format \
+                fluent-plugin-diskusage
 
-ENV ES_HOST es-logging.svc.cluster.local
-ENV ES_PORT 9200
+RUN mkdir -p /etc/fluent/
+COPY docker-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-ADD fluent.conf /etc/fluent/fluent.conf
-
-ENTRYPOINT ["fluentd"]
+ENTRYPOINT ["/entrypoint.sh"]
